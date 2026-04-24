@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NYC Healthtech Ecosystem — Storm3</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #fff; display: flex; flex-direction: column; height: 100vh; }
+.header { padding: 12px 20px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #eee; flex-shrink: 0; }
+.title { font-size: 16px; font-weight: 600; color: #111; }
+.count { background: #f0eeff; color: #534AB7; font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 10px; }
+.sub { font-size: 12px; color: #999; }
+.badge { font-size: 11px; font-weight: 600; background: #534AB7; color: #fff; padding: 3px 10px; border-radius: 20px; margin-left: auto; }
+.controls { padding: 8px 20px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; border-bottom: 1px solid #eee; flex-shrink: 0; }
+.filter-btn { font-size: 11px; padding: 3px 10px; border-radius: 20px; border: 1px solid #ddd; background: #fff; color: #666; cursor: pointer; transition: all 0.15s; }
+.filter-btn.active { background: #534AB7; color: #fff; border-color: #534AB7; }
+.filter-btn:hover:not(.active) { background: #f5f5f5; }
+.sep { width: 1px; height: 20px; background: #eee; margin: 0 4px; }
+#map { flex: 1; width: 100%; }
+.legend { position: fixed; bottom: 24px; left: 16px; z-index: 1000; background: #fff; border: 1px solid #eee; border-radius: 8px; padding: 10px 14px; font-size: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+.legend-title { font-size: 10px; font-weight: 600; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+.legend-row { display: flex; align-items: center; gap: 7px; margin-bottom: 4px; color: #555; }
+.dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <span class="title">NYC Healthtech Ecosystem</span>
+  <span class="count" id="count">36 companies</span>
+  <span class="sub">Click any pin for details</span>
+  <span class="badge">Storm3</span>
+</div>
+
+<div class="controls">
+  <span style="font-size:11px;color:#aaa;margin-right:2px">Stage</span>
+  <button class="filter-btn active" data-f="stage" data-v="all">All</button>
+  <button class="filter-btn" data-f="stage" data-v="Seed">Seed</button>
+  <button class="filter-btn" data-f="stage" data-v="Series A">Series A</button>
+  <button class="filter-btn" data-f="stage" data-v="Series B">Series B</button>
+  <button class="filter-btn" data-f="stage" data-v="Series C+">Series C+</button>
+  <div class="sep"></div>
+  <span style="font-size:11px;color:#aaa;margin-right:2px">Category</span>
+  <button class="filter-btn active" data-f="cat" data-v="all">All</button>
+  <button class="filter-btn" data-f="cat" data-v="AI/ML">AI/ML</button>
+  <button class="filter-btn" data-f="cat" data-v="Mental Health">Mental Health</button>
+  <button class="filter-btn" data-f="cat" data-v="Digital Health">Digital Health</button>
+  <button class="filter-btn" data-f="cat" data-v="Insurance/Benefits">Insurance</button>
+</div>
+
+<div id="map"></div>
+
+<div class="legend">
+  <div class="legend-title">Funding Stage</div>
+  <div class="legend-row"><div class="dot" style="background:#F59E0B"></div>Seed</div>
+  <div class="legend-row"><div class="dot" style="background:#10B981"></div>Series A</div>
+  <div class="legend-row"><div class="dot" style="background:#3B82F6"></div>Series B</div>
+  <div class="legend-row"><div class="dot" style="background:#8B5CF6"></div>Series C+</div>
+  <div class="legend-row"><div class="dot" style="background:#9CA3AF"></div>Other</div>
+</div>
+
+<script>
+const companies = [
+  { name:"Grow Therapy", lat:40.7359, lng:-73.9906, stage:"Series C+", cat:"Mental Health", funding:"$150M", web:"growtherapy.com", desc:"Mental health provider network" },
+  { name:"Talkiatry", lat:40.7448, lng:-73.9877, stage:"Series C+", cat:"Mental Health", funding:"$210M", web:"talkiatry.com", desc:"In-network psychiatry at scale" },
+  { name:"Garner Health", lat:40.7265, lng:-73.9980, stage:"Series C+", cat:"Digital Health", funding:"$118M", web:"garnerhealth.com", desc:"Employer benefit platform" },
+  { name:"EliseAI", lat:40.7484, lng:-73.9845, stage:"Series C+", cat:"AI/ML", funding:"$250M", web:"eliseai.com", desc:"AI automation for healthcare ops" },
+  { name:"Judi Health", lat:40.7505, lng:-73.9934, stage:"Series C+", cat:"AI/ML", funding:"$400M", web:"judi.health", desc:"AI-powered healthcare platform" },
+  { name:"Chapter", lat:40.7352, lng:-73.9908, stage:"Series C+", cat:"Insurance/Benefits", funding:"$100M", web:"askchapter.org", desc:"Medicare advisory platform" },
+  { name:"Pomelo Care", lat:40.7425, lng:-73.9893, stage:"Series C+", cat:"Digital Health", funding:"$92M", web:"pomelocare.com", desc:"Maternity care platform" },
+  { name:"Osmo", lat:40.7510, lng:-73.9760, stage:"Series B", cat:"AI/ML", funding:"$70M", web:"osmo.ai", desc:"AI for scent and diagnostics" },
+  { name:"Empathy", lat:40.7453, lng:-74.0004, stage:"Series C+", cat:"Digital Health", funding:"$72M", web:"empathy.com", desc:"End-of-life family support" },
+  { name:"Click Therapeutics", lat:40.7196, lng:-74.0030, stage:"Series C+", cat:"Digital Health", funding:"$50M", web:"clicktherapeutics.com", desc:"Prescription digital therapeutics" },
+  { name:"Alaffia Health", lat:40.7528, lng:-73.9802, stage:"Series B", cat:"AI/ML", funding:"$55M", web:"alaffiahealth.com", desc:"AI claims integrity platform" },
+  { name:"Cedar", lat:40.7270, lng:-73.9974, stage:"Series C+", cat:"Digital Health", funding:"$200M+", web:"cedar.com", desc:"Healthcare financial engagement" },
+  { name:"Clarion Health", lat:40.7440, lng:-73.9950, stage:"Series A", cat:"AI/ML", funding:"Undisclosed", web:"clarionhealth.com", desc:"Healthcare analytics and AI" },
+  { name:"Capital Rx", lat:40.7380, lng:-73.9895, stage:"Series C+", cat:"Insurance/Benefits", funding:"$100M+", web:"capitalrx.com", desc:"Pharmacy benefit manager" },
+  { name:"Sonder Health", lat:40.7497, lng:-73.9880, stage:"Seed", cat:"Digital Health", funding:"Undisclosed", web:"sonderhealth.co", desc:"Digital health navigation" },
+  { name:"Tennr", lat:40.7358, lng:-74.0048, stage:"Series C+", cat:"AI/ML", funding:"$101M", web:"tennr.com", desc:"AI for healthcare referrals" },
+  { name:"Solstice Health", lat:40.7368, lng:-73.9912, stage:"Seed", cat:"AI/ML", funding:"Undisclosed", web:"solsticehealth.co", desc:"Pharma AI for smarter prescribing" },
+  { name:"Zingage", lat:40.7243, lng:-74.0020, stage:"Seed", cat:"AI/ML", funding:"$12.5M", web:"zingage.com", desc:"AI-powered home health" },
+  { name:"Salvo Health", lat:40.7521, lng:-73.9726, stage:"Series A", cat:"Digital Health", funding:"$8.5M", web:"salvohealth.com", desc:"Chronic condition care navigation" },
+  { name:"Isaac Health", lat:40.7468, lng:-73.9864, stage:"Series A", cat:"Mental Health", funding:"$10.5M", web:"myisaachealth.com", desc:"Mental health for older adults" },
+  { name:"Aidin", lat:40.7233, lng:-74.0005, stage:"Other", cat:"Digital Health", funding:"$3.5M", web:"myaidin.com", desc:"Post-acute care referral platform" },
+  { name:"Sword Health", lat:40.7492, lng:-73.9908, stage:"Series C+", cat:"Digital Health", funding:"$40M", web:"swordhealth.com", desc:"AI musculoskeletal care" },
+  { name:"Translucent AI", lat:40.7352, lng:-73.9924, stage:"Series A", cat:"AI/ML", funding:"$27M", web:"translucent.co", desc:"AI for healthcare finance" },
+  { name:"ExaCare", lat:40.7533, lng:-73.9912, stage:"Series A", cat:"AI/ML", funding:"$30M", web:"exacare.com", desc:"AI workforce for senior care" },
+  { name:"Hyro", lat:40.7415, lng:-73.9870, stage:"Other", cat:"AI/ML", funding:"$45M", web:"hyro.ai", desc:"Conversational AI for healthcare" },
+  { name:"Anterior", lat:40.7330, lng:-73.9945, stage:"Other", cat:"AI/ML", funding:"$40M", web:"anterior.com", desc:"AI for prior authorization" },
+  { name:"Doctronic", lat:40.7408, lng:-73.9958, stage:"Series B", cat:"AI/ML", funding:"$40M", web:"doctronic.ai", desc:"AI doctor consultation" },
+  { name:"Adonis", lat:40.7462, lng:-73.9839, stage:"Series C+", cat:"Digital Health", funding:"$40M", web:"adonis.io", desc:"Revenue intelligence for healthcare" },
+  { name:"Blossom Health", lat:40.7421, lng:-73.9934, stage:"Series A", cat:"Mental Health", funding:"$20M", web:"joinblossomhealth.com", desc:"Mental health for families" },
+  { name:"Oasys Health", lat:40.7388, lng:-73.9878, stage:"Seed", cat:"Mental Health", funding:"$4M", web:"oasys.health", desc:"AI mental health platform" },
+  { name:"Amigo AI", lat:40.7396, lng:-73.9942, stage:"Series A", cat:"AI/ML", funding:"$11M", web:"amigo.ai", desc:"AI care coordination" },
+  { name:"Conduit Health", lat:40.7445, lng:-73.9915, stage:"Series A", cat:"Digital Health", funding:"$17M", web:"conduithealth.com", desc:"On-demand clinical consultation" },
+  { name:"Understood Care", lat:40.7434, lng:-73.9899, stage:"Seed", cat:"Insurance/Benefits", funding:"$5M", web:"understoodcare.com", desc:"Health insurance navigation" },
+  { name:"Tandem", lat:40.7471, lng:-73.9856, stage:"Series B", cat:"AI/ML", funding:"Undisclosed", web:"withtandem.com", desc:"AI care navigation" },
+  { name:"Take2 AI", lat:40.7399, lng:-73.9861, stage:"Series A", cat:"AI/ML", funding:"$14M", web:"take2.ai", desc:"AI-powered clinical hiring" },
+  { name:"Diana Health", lat:40.7320, lng:-73.9890, stage:"Series C+", cat:"Digital Health", funding:"$55M", web:"heydianahealth.com", desc:"Women's health clinic network" },
+];
+
+const colors = { "Seed":"#F59E0B", "Series A":"#10B981", "Series B":"#3B82F6", "Series C+":"#8B5CF6", "Other":"#9CA3AF" };
+let sF = "all", cF = "all";
+let map, allMarkers = [], infoWindow;
+
+function initMap() {
+  map = new google.maps.Map(document.getElementById("map"), {
+    center: { lat: 40.742, lng: -73.987 },
+    zoom: 14,
+    mapTypeId: "roadmap",
+    styles: [
+      { featureType: "all", elementType: "labels.text.fill", stylers: [{ color: "#9ca3af" }] },
+      { featureType: "all", elementType: "labels.text.stroke", stylers: [{ color: "#ffffff" }, { weight: 2 }] },
+      { featureType: "water", elementType: "geometry", stylers: [{ color: "#dde6f0" }] },
+      { featureType: "landscape", elementType: "geometry", stylers: [{ color: "#f5f5f5" }] },
+      { featureType: "road", elementType: "geometry", stylers: [{ color: "#ffffff" }] },
+      { featureType: "road.arterial", elementType: "geometry", stylers: [{ color: "#ebebeb" }] },
+      { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#e0e0e0" }] },
+      { featureType: "poi", elementType: "geometry", stylers: [{ color: "#eeeeee" }] },
+      { featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] },
+      { featureType: "transit", stylers: [{ visibility: "off" }] },
+      { featureType: "administrative", elementType: "geometry.stroke", stylers: [{ color: "#d1d5db" }] },
+    ],
+    disableDefaultUI: false,
+    zoomControl: true,
+    mapTypeControl: false,
+    streetViewControl: false,
+    fullscreenControl: true,
+  });
+
+  infoWindow = new google.maps.InfoWindow();
+  renderMarkers();
+}
+
+function makeCircleIcon(color) {
+  return {
+    path: google.maps.SymbolPath.CIRCLE,
+    fillColor: color,
+    fillOpacity: 1,
+    strokeColor: "#ffffff",
+    strokeWeight: 2,
+    scale: 7,
+  };
+}
+
+function renderMarkers() {
+  allMarkers.forEach(m => m.setMap(null));
+  allMarkers = [];
+  let count = 0;
+
+  companies.forEach(c => {
+    if (sF !== 'all' && c.stage !== sF) return;
+    if (cF !== 'all' && c.cat !== cF) return;
+
+    const color = colors[c.stage] || "#9CA3AF";
+    const marker = new google.maps.Marker({
+      position: { lat: c.lat, lng: c.lng },
+      map: map,
+      icon: makeCircleIcon(color),
+      title: c.name,
+    });
+
+    marker.addListener("click", () => {
+      infoWindow.setContent(`
+        <div style="font-family:-apple-system,sans-serif;min-width:190px;max-width:240px;padding:4px 2px">
+          <div style="font-size:14px;font-weight:600;color:#111;margin-bottom:4px">${c.name}</div>
+          <div style="margin-bottom:6px">
+            <span style="font-size:11px;color:${color};font-weight:600">${c.stage}</span>
+            <span style="font-size:11px;color:#bbb;margin-left:6px">${c.cat}</span>
+          </div>
+          <div style="font-size:12px;color:#666;margin-bottom:5px">${c.desc}</div>
+          <div style="font-size:12px;color:#111;margin-bottom:5px">Raised: <strong style="color:#534AB7">${c.funding}</strong></div>
+          <a href="https://${c.web}" target="_blank" style="font-size:11px;color:#534AB7;text-decoration:none">↗ ${c.web}</a>
+        </div>
+      `);
+      infoWindow.open(map, marker);
+    });
+
+    allMarkers.push(marker);
+    count++;
+  });
+
+  document.getElementById("count").textContent = count + " companies";
+}
+
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const f = btn.dataset.f, v = btn.dataset.v;
+    document.querySelectorAll(`.filter-btn[data-f="${f}"]`).forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    if (f === 'stage') sF = v;
+    if (f === 'cat') cF = v;
+    if (map) renderMarkers();
+  });
+});
+</script>
+<script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDSeQP8CNMY_rlnK45Fx6hIL3uwd3MWD1o&callback=initMap"></script>
+</body>
+</html>
